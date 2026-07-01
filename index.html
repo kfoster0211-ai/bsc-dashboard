@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bayard Street Creative: Freelancer Hub</title>
+<style>
+  :root{
+    --teal:#2C8C8C;
+    --teal-dark:#1F6666;
+    --navy:#1F3A5F;
+    --dark:#2B2E33;
+    --gray:#63696F;
+    --gray-light:#8A9096;
+    --bg:#F6F8F8;
+    --light-bg:#EAF3F4;
+    --border:#DFE4E6;
+    --white:#FFFFFF;
+    --danger:#B84B41;
+    --danger-bg:#FBEDEB;
+    --success:#2F8F5B;
+    --success-bg:#EAF6EF;
+    --warn:#B8860B;
+    --warn-bg:#FDF6E3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    color:var(--dark);
+    background:var(--bg);
+  }
+  .app{max-width:980px;margin:0 auto;padding:24px 20px 80px;}
+
+  /* ---- Top bar ---- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding-bottom:16px;margin-bottom:20px;border-bottom:2px solid var(--teal);
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:34px;height:34px;border-radius:8px;background:var(--navy);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:14px;letter-spacing:0.5px;
+  }
+  .brand-text{line-height:1.15;}
+  .brand-text .t1{font-weight:800;font-size:15px;color:var(--navy);letter-spacing:0.2px;}
+  .brand-text .t2{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;}
+  .who{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--gray);}
+  .who b{color:var(--dark);}
+  .switch-link{color:var(--teal-dark);cursor:pointer;text-decoration:underline;font-size:13px;background:none;border:none;padding:0;}
+
+  /* ---- Identity picker ---- */
+  .gate{
+    max-width:420px;margin:80px auto;background:var(--white);
+    border:1px solid var(--border);border-radius:14px;padding:36px 32px;
+    text-align:center;
+  }
+  .gate .brand-mark{margin:0 auto 14px;width:52px;height:52px;font-size:20px;border-radius:12px;}
+  .gate h1{font-size:20px;margin:0 0 4px;color:var(--navy);}
+  .gate p{color:var(--gray);font-size:13.5px;margin:0 0 24px;}
+  select, input[type=text], input[type=number], input[type=email], input[type=date], textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+    font-size:14px;font-family:inherit;color:var(--dark);background:#fff;
+  }
+  select:focus, input:focus, textarea:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal);}
+  .field{margin-bottom:14px;text-align:left;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--gray);margin-bottom:5px;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--teal);color:#fff;border:none;border-radius:8px;
+    padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;
+    font-family:inherit;
+  }
+  .btn:hover{background:var(--teal-dark);}
+  .btn.secondary{background:var(--white);color:var(--navy);border:1px solid var(--border);}
+  .btn.secondary:hover{background:var(--light-bg);}
+  .btn.danger{background:var(--danger);}
+  .btn.danger:hover{background:#96382f;}
+  .btn.block{width:100%;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .divider-or{display:flex;align-items:center;gap:10px;color:var(--gray-light);font-size:11px;margin:18px 0;text-transform:uppercase;letter-spacing:1px;}
+  .divider-or::before,.divider-or::after{content:"";flex:1;height:1px;background:var(--border);}
+
+  /* ---- Tabs ---- */
+  .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .tab{
+    padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--gray);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .tab.active{color:var(--teal-dark);border-bottom-color:var(--teal);}
+  .tab .badge{
+    display:inline-block;background:var(--teal);color:#fff;border-radius:10px;
+    font-size:10px;padding:1px 6px;margin-left:5px;font-weight:700;
+  }
+
+  /* ---- Cards ---- */
+  .card{
+    background:var(--white);border:1px solid var(--border);border-radius:12px;
+    padding:18px 20px;margin-bottom:14px;
+  }
+  .card-title{font-size:15px;font-weight:700;color:var(--navy);margin:0 0 2px;}
+  .card-sub{font-size:12.5px;color:var(--gray);margin-bottom:10px;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:16px;margin:10px 0;font-size:13px;}
+  .meta-item .k{color:var(--gray-light);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;display:block;}
+  .meta-item .v{color:var(--dark);font-weight:600;}
+  .brief-text{font-size:13.5px;color:var(--dark);background:var(--bg);border-radius:8px;padding:12px 14px;margin:10px 0;white-space:pre-wrap;line-height:1.5;}
+  .drive-link{
+    display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--teal-dark);
+    text-decoration:none;font-weight:600;
+  }
+  .drive-link:hover{text-decoration:underline;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .row .field{flex:1;min-width:140px;margin-bottom:0;}
+  .empty{
+    text-align:center;color:var(--gray-light);padding:50px 20px;font-size:13.5px;
+    border:1.5px dashed var(--border);border-radius:12px;
+  }
+  .pill{
+    display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.3px;
+  }
+  .pill.open{background:var(--warn-bg);color:var(--warn);}
+  .pill.claimed{background:var(--light-bg);color:var(--teal-dark);}
+  .pill.in_progress{background:#EAEFFB;color:#39508F;}
+  .pill.uploaded{background:#F0EAFB;color:#6B3F9E;}
+  .pill.complete{background:var(--success-bg);color:var(--success);}
+  .pill.paid{background:var(--success-bg);color:var(--success);}
+  .pill.unpaid{background:var(--danger-bg);color:var(--danger);}
+  .pill.warn{background:var(--warn-bg);color:var(--warn);}
+
+  h2.section-title{font-size:16px;color:var(--navy);margin:26px 0 12px;}
+  h2.section-title:first-child{margin-top:0;}
+
+  .warn-banner{
+    background:var(--warn-bg);border:1px solid #EEDDA4;color:#7A5C0A;
+    border-radius:10px;padding:12px 14px;font-size:12.5px;margin-bottom:16px;line-height:1.5;
+  }
+
+  /* ---- Messages ---- */
+  .thread{
+    background:var(--white);border:1px solid var(--border);border-radius:12px;
+    padding:16px;height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+    margin-bottom:12px;
+  }
+  .msg{max-width:75%;padding:9px 13px;border-radius:12px;font-size:13.5px;line-height:1.4;}
+  .msg .ts{font-size:10px;opacity:0.65;margin-top:3px;}
+  .msg.mine{align-self:flex-end;background:var(--teal);color:#fff;border-bottom-right-radius:3px;}
+  .msg.theirs{align-self:flex-start;background:var(--light-bg);color:var(--dark);border-bottom-left-radius:3px;}
+  .msg .who-tag{font-size:10.5px;font-weight:700;opacity:0.8;display:block;margin-bottom:2px;}
+  .compose{display:flex;gap:8px;}
+  .compose textarea{resize:none;height:44px;padding:11px 12px;}
+
+  /* ---- Roster / All projects tables ---- */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
+    color:var(--gray-light);padding:8px 10px;border-bottom:1px solid var(--border);
+  }
+  td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .thread-list-item{
+    padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;
+    cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  }
+  .thread-list-item:hover{border-color:var(--teal);}
+  .thread-list-item.active{border-color:var(--teal);background:var(--light-bg);}
+  .thread-list-item .name{font-weight:700;font-size:13.5px;color:var(--dark);}
+  .thread-list-item .preview{font-size:12px;color:var(--gray);margin-top:2px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dot-unread{width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--dark);color:#fff;padding:10px 18px;border-radius:8px;
+    font-size:13px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:50;
+  }
+  .toast.show{opacity:1;}
+
+  .payment-fields{background:var(--bg);border-radius:10px;padding:14px;margin-top:10px;}
+  .method-toggle{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+  .method-btn{
+    padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;
+    font-size:13px;font-weight:600;cursor:pointer;color:var(--gray);
+  }
+  .method-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+  @media(max-width:600px){
+    .app{padding:16px 12px 60px;}
+    .thread{height:320px;}
+    .msg{max-width:88%;}
+  }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ============================= FIREBASE SETUP ============================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAyBTPlxW677sGrCazKctxGVs1i1e2ssFM",
+  authDomain: "bsc-dashboard-fcf2e.firebaseapp.com",
+  projectId: "bsc-dashboard-fcf2e",
+  storageBucket: "bsc-dashboard-fcf2e.firebasestorage.app",
+  messagingSenderId: "922686708282",
+  appId: "1:922686708282:web:e04b9660c269fe4c013303"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const DASHBOARD_COLLECTION = 'bsc_dashboard';
+
+/* ============================= STORAGE HELPERS ============================= */
+async function loadKey(key, fallback){
+  try{
+    const snap = await db.collection(DASHBOARD_COLLECTION).doc(key).get();
+    if(snap.exists && snap.data().value !== undefined){
+      return JSON.parse(snap.data().value);
+    }
+    return fallback;
+  }catch(e){ console.error('Load error', key, e); return fallback; }
+}
+async function saveKey(key, value){
+  try{
+    await db.collection(DASHBOARD_COLLECTION).doc(key).set({ value: JSON.stringify(value) });
+    return true;
+  }catch(e){ console.error('Storage error', key, e); return false; }
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function escapeHtml(s){
+  if(s===undefined||s===null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtMoney(n){
+  n = Number(n)||0;
+  return '$' + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtDate(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+const ADMIN_PIN = '8546';
+const STATUS_LABELS = {
+  open:'Open', claimed:'Claimed', in_progress:'In Progress', uploaded:'Uploaded', complete:'Complete'
+};
+const STATUS_ORDER = ['claimed','in_progress','uploaded','complete'];
+
+/* ============================= APP STATE ============================= */
+const state = {
+  freelancers: [],
+  projects: [],
+  messages: [],
+  payments: {},   // { freelancerId: {method, ...fields, updatedAt} }
+  settings: {},   // { docUploadLink }
+  currentUser: null,  // { id, name, role: 'freelancer'|'admin' }
+  tab: null,
+  activeThreadId: null, // for admin messages view
+};
+
+async function loadAll(){
+  const [freelancers, projects, messages, payments, settings] = await Promise.all([
+    loadKey('bsc_freelancers', []),
+    loadKey('bsc_projects', []),
+    loadKey('bsc_messages', []),
+    loadKey('bsc_payments', {}),
+    loadKey('bsc_settings', {}),
+  ]);
+  state.freelancers = freelancers;
+  state.projects = projects;
+  state.messages = messages;
+  state.payments = payments;
+  state.settings = settings;
+}
+
+async function refreshAndRender(){
+  await loadAll();
+  render();
+}
+
+/* ============================= RENDER ROOT ============================= */
+function render(){
+  const root = document.getElementById('root');
+  if(!state.currentUser){
+    root.innerHTML = renderGate();
+    bindGateEvents();
+    return;
+  }
+  root.innerHTML = renderApp();
+  bindAppEvents();
+}
+
+/* ============================= GATE (IDENTITY PICKER) ============================= */
+function renderGate(){
+  const mode = state.gateMode || 'login'; // 'login' | 'firstpin' | 'admin'
+  return `
+  <div class="app">
+    <div class="gate">
+      <div class="brand-mark">BSC</div>
+      <h1>Freelancer Hub</h1>
+      <p>Bayard Street Creative: projects, files &amp; invoicing in one place.</p>
+
+      ${mode === 'admin' ? `
+        <div class="field">
+          <label>Admin PIN</label>
+          <input type="password" id="gate-admin-pin" inputmode="numeric" placeholder="Enter admin PIN">
+        </div>
+        <button class="btn block" id="gate-continue">Continue</button>
+        <button class="switch-link" id="gate-back" style="margin-top:14px;">&larr; Back to freelancer login</button>
+      ` : `
+        <div class="field">
+          <label>Your name</label>
+          <input type="text" id="gate-name-input" placeholder="Full name">
+        </div>
+        ${mode === 'firstpin' ? `
+          <div class="warn-banner">First time logging in? Create a PIN so only you can access your profile.</div>
+          <div class="row">
+            <div class="field"><input type="password" id="gate-pin" inputmode="numeric" placeholder="Create a PIN (4+ digits)"></div>
+            <div class="field"><input type="password" id="gate-pin2" inputmode="numeric" placeholder="Confirm PIN"></div>
+          </div>
+        ` : `
+          <div class="field">
+            <label>Your PIN</label>
+            <input type="password" id="gate-pin" inputmode="numeric" placeholder="Enter PIN">
+          </div>
+        `}
+        <button class="btn block" id="gate-continue">Continue</button>
+        <div style="margin-top:12px;font-size:12.5px;">
+          <button class="switch-link" id="gate-toggle-firstpin">${mode==='firstpin' ? 'I already have a PIN' : 'First time logging in? Create a PIN'}</button>
+        </div>
+      `}
+
+      <div class="divider-or">or</div>
+
+      <div class="field">
+        <label>New here? Add yourself to the roster</label>
+        <input type="text" id="gate-new-name" placeholder="Full name">
+      </div>
+      <div class="field">
+        <input type="email" id="gate-new-email" placeholder="Email address">
+      </div>
+      <div class="row">
+        <div class="field"><input type="password" id="gate-new-pin" inputmode="numeric" placeholder="Create a PIN (4+ digits)"></div>
+        <div class="field"><input type="password" id="gate-new-pin2" inputmode="numeric" placeholder="Confirm PIN"></div>
+      </div>
+      <button class="btn secondary block" id="gate-join">Join the roster</button>
+
+      <div style="margin-top:18px;">
+        <button class="switch-link" id="gate-admin-toggle" style="font-size:12px;">${mode==='admin' ? '' : "Admin login"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function bindGateEvents(){
+  const mode = state.gateMode || 'login';
+
+  if(mode === 'admin'){
+    document.getElementById('gate-back').onclick = () => { state.gateMode = 'login'; render(); };
+    document.getElementById('gate-continue').onclick = () => {
+      const pin = document.getElementById('gate-admin-pin').value.trim();
+      if(pin !== ADMIN_PIN){ showToast('Incorrect PIN'); return; }
+      state.currentUser = { id:'__admin', name:'Admin', role:'admin' };
+      state.gateMode = 'login';
+      state.tab = 'roster';
+      render();
+    };
+  } else {
+    document.getElementById('gate-toggle-firstpin').onclick = () => {
+      state.gateMode = mode === 'firstpin' ? 'login' : 'firstpin';
+      render();
+    };
+    document.getElementById('gate-admin-toggle').onclick = () => {
+      state.gateMode = 'admin';
+      render();
+    };
+
+    document.getElementById('gate-continue').onclick = async () => {
+      const typedName = document.getElementById('gate-name-input').value.trim();
+      if(!typedName){ showToast('Enter your name'); return; }
+      const f = state.freelancers.find(x => x.name.toLowerCase() === typedName.toLowerCase());
+      if(!f){ showToast("We couldn't find that name. Double check with the team, or use 'Join the roster' below."); return; }
+
+      if(mode === 'firstpin'){
+        if(f.pin){ showToast('A PIN is already set for this name. Use the login option instead.'); return; }
+        const p1 = document.getElementById('gate-pin').value.trim();
+        const p2 = document.getElementById('gate-pin2').value.trim();
+        if(p1.length < 4){ showToast('PIN must be at least 4 digits'); return; }
+        if(p1 !== p2){ showToast("PINs don't match"); return; }
+        f.pin = p1;
+        await saveKey('bsc_freelancers', state.freelancers);
+        showToast('PIN created');
+      } else {
+        if(!f.pin){ showToast("No PIN set yet for this name. Use 'First time logging in?' below."); return; }
+        const pin = document.getElementById('gate-pin').value.trim();
+        if(pin !== f.pin){ showToast('Incorrect PIN'); return; }
+      }
+
+      state.currentUser = { id:f.id, name:f.name, role:'freelancer' };
+      state.gateMode = 'login';
+      state.tab = 'jobs';
+      render();
+    };
+  }
+
+  document.getElementById('gate-join').onclick = async () => {
+    const name = document.getElementById('gate-new-name').value.trim();
+    const email = document.getElementById('gate-new-email').value.trim();
+    const p1 = document.getElementById('gate-new-pin').value.trim();
+    const p2 = document.getElementById('gate-new-pin2').value.trim();
+    if(!name || !email){ showToast('Enter your name and email'); return; }
+    if(p1.length < 4){ showToast('PIN must be at least 4 digits'); return; }
+    if(p1 !== p2){ showToast("PINs don't match"); return; }
+    if(state.freelancers.some(x=>x.name.toLowerCase()===name.toLowerCase())){
+      showToast('That name is already on the roster. Use the login option above.'); return;
+    }
+    const f = { id: uid(), name, email, pin: p1, joinedAt: Date.now() };
+    state.freelancers.push(f);
+    await saveKey('bsc_freelancers', state.freelancers);
+    state.currentUser = { id:f.id, name:f.name, role:'freelancer' };
+    state.gateMode = 'login';
+    state.tab = 'jobs';
+    showToast('Welcome, ' + name + '!');
+    render();
+  };
+}
+
+/* ============================= MAIN APP SHELL ============================= */
+function renderApp(){
+  const isAdmin = state.currentUser.role === 'admin';
+  const tabs = isAdmin
+    ? [
+        ['roster','Roster'],
+        ['post','Post a Job'],
+        ['allprojects','All Projects'],
+        ['documents','Documents'],
+        ['messages','Messages'],
+      ]
+    : [
+        ['jobs','Available Jobs'],
+        ['myprojects','My Projects'],
+        ['documents','Documents'],
+        ['payment','Payment Info'],
+        ['messages','Messages'],
+      ];
+
+  const unreadCount = isAdmin ? countAdminUnread() : countFreelancerUnread(state.currentUser.id);
+
+  return `
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">BSC</div>
+        <div class="brand-text">
+          <div class="t1">Bayard Street Creative</div>
+          <div class="t2">Freelancer Hub</div>
+        </div>
+      </div>
+      <div class="who">
+        <span>Signed in as <b>${escapeHtml(state.currentUser.name)}</b></span>
+        <button class="switch-link" id="switch-user">Switch user</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      ${tabs.map(([key,label]) => `
+        <div class="tab ${state.tab===key?'active':''}" data-tab="${key}">
+          ${label}${key==='messages' && unreadCount>0 ? `<span class="badge">${unreadCount}</span>` : ''}
+        </div>`).join('')}
+    </div>
+
+    <div id="tab-content">
+      ${renderTabContent()}
+    </div>
+  </div>`;
+}
+
+function renderTabContent(){
+  const isAdmin = state.currentUser.role === 'admin';
+  if(isAdmin){
+    if(state.tab==='roster') return renderAdminRoster();
+    if(state.tab==='post') return renderAdminPostJob();
+    if(state.tab==='allprojects') return renderAdminAllProjects();
+    if(state.tab==='documents') return renderAdminDocuments();
+    if(state.tab==='messages') return renderAdminMessages();
+  } else {
+    if(state.tab==='jobs') return renderFreelancerJobs();
+    if(state.tab==='myprojects') return renderFreelancerMyProjects();
+    if(state.tab==='documents') return renderFreelancerDocuments();
+    if(state.tab==='payment') return renderFreelancerPayment();
+    if(state.tab==='messages') return renderFreelancerMessages();
+  }
+  return '';
+}
+
+function bindAppEvents(){
+  document.getElementById('switch-user').onclick = () => {
+    state.currentUser = null;
+    state.gateMode = 'login';
+    render();
+  };
+  document.querySelectorAll('.tab').forEach(el=>{
+    el.onclick = () => {
+      if(el.dataset.tab !== 'post') state.lastPostedJob = null;
+      state.tab = el.dataset.tab; render();
+    };
+  });
+  bindTabSpecificEvents();
+}
+
+function bindTabSpecificEvents(){
+  const isAdmin = state.currentUser.role === 'admin';
+  if(isAdmin){
+    if(state.tab==='roster') bindAdminRoster();
+    if(state.tab==='post') bindAdminPostJob();
+    if(state.tab==='allprojects') bindAdminAllProjects();
+    if(state.tab==='documents') bindAdminDocuments();
+    if(state.tab==='messages') bindAdminMessages();
+  } else {
+    if(state.tab==='jobs') bindFreelancerJobs();
+    if(state.tab==='myprojects') bindFreelancerMyProjects();
+    if(state.tab==='documents') bindFreelancerDocuments();
+    if(state.tab==='payment') bindFreelancerPayment();
+    if(state.tab==='messages') bindFreelancerMessages();
+  }
+}
+
+/* ============================= FREELANCER: AVAILABLE JOBS ============================= */
+function renderFreelancerJobs(){
+  const open = state.projects.filter(p=>{
+    if(p.status!=='open') return false;
+    if(!p.targetIds || p.targetIds.length===0) return true; // no targeting = visible to all
+    return p.targetIds.includes(state.currentUser.id);
+  });
+  if(open.length===0){
+    return `<div class="empty">No open jobs right now. Check back soon, or watch your Messages tab for updates.</div>`;
+  }
+  return open.map(p=>`
+    <div class="card">
+      <div class="card-title">${escapeHtml(p.title)}</div>
+      <div class="meta-row">
+        <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(p.rate)}/hr</span></div>
+        <div class="meta-item"><span class="k">Hours Available</span><span class="v">${escapeHtml(p.totalHours)}</span></div>
+        <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(p.timeline)}</span></div>
+      </div>
+      ${p.brief ? `<div class="brief-text">${escapeHtml(p.brief)}</div>` : ''}
+      ${p.driveLink ? `<a class="drive-link" href="${escapeHtml(p.driveLink)}" target="_blank" rel="noopener">📁 View brief folder</a>` : ''}
+      <div class="row" style="margin-top:14px;">
+        <div class="field">
+          <label>Hours you can commit to</label>
+          <input type="number" min="0.5" step="0.5" class="claim-hours" id="hrs-${p.id}" placeholder="e.g. 12">
+        </div>
+        <button class="btn claim-btn" data-id="${p.id}">Accept &amp; Claim</button>
+      </div>
+    </div>
+  `).join('');
+}
+function bindFreelancerJobs(){
+  document.querySelectorAll('.claim-btn').forEach(btn=>{
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const hoursInput = document.getElementById('hrs-'+id);
+      const hours = parseFloat(hoursInput.value);
+      if(!hours || hours<=0){ showToast('Enter how many hours you can commit to'); return; }
+      const p = state.projects.find(x=>x.id===id);
+      p.status = 'claimed';
+      p.claimedBy = state.currentUser.id;
+      p.claimedByName = state.currentUser.name;
+      p.committedHours = hours;
+      p.claimedAt = Date.now();
+      await saveKey('bsc_projects', state.projects);
+      showToast('Job claimed! Find it under My Projects.');
+      state.tab = 'myprojects';
+      render();
+    };
+  });
+}
+
+/* ============================= FREELANCER: MY PROJECTS ============================= */
+function renderFreelancerMyProjects(){
+  const mine = state.projects.filter(p=>p.claimedBy===state.currentUser.id);
+  if(mine.length===0){
+    return `<div class="empty">You haven't claimed any projects yet. Check the Available Jobs tab.</div>`;
+  }
+  return mine.map(p=>{
+    const invoiceAmt = (p.hoursLogged!=null ? p.hoursLogged : p.committedHours) * p.rate;
+    return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="card-title">${escapeHtml(p.title)}</div>
+          <div class="card-sub">Claimed ${fmtDate(p.claimedAt)}</div>
+        </div>
+        <span class="pill ${p.status}">${STATUS_LABELS[p.status]}</span>
+      </div>
+      <div class="meta-row">
+        <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(p.rate)}/hr</span></div>
+        <div class="meta-item"><span class="k">Committed Hours</span><span class="v">${p.committedHours}</span></div>
+        <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(p.timeline)}</span></div>
+      </div>
+      ${p.brief ? `<div class="brief-text">${escapeHtml(p.brief)}</div>` : ''}
+      ${p.driveLink ? `<a class="drive-link" href="${escapeHtml(p.driveLink)}" target="_blank" rel="noopener">📁 Open project folder</a>` : ''}
+
+      <div class="row" style="margin-top:16px;">
+        <div class="field">
+          <label>Status</label>
+          <select class="status-select" data-id="${p.id}">
+            ${STATUS_ORDER.map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Hours worked</label>
+          <input type="number" min="0" step="0.25" class="hours-logged" data-id="${p.id}" value="${p.hoursLogged!=null?p.hoursLogged:''}" placeholder="${p.committedHours}">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="meta-item"><span class="k">Invoice total</span><span class="v">${fmtMoney(invoiceAmt)}</span></div>
+        ${p.invoiceSubmitted
+          ? `<span class="pill ${p.paid?'paid':'unpaid'}" style="margin-left:auto;">${p.paid?'Paid':'Invoice Submitted'}</span>`
+          : `<button class="btn submit-invoice-btn" data-id="${p.id}" style="margin-left:auto;">Submit Invoice</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+function bindFreelancerMyProjects(){
+  document.querySelectorAll('.status-select').forEach(sel=>{
+    sel.onchange = async () => {
+      const p = state.projects.find(x=>x.id===sel.dataset.id);
+      p.status = sel.value;
+      await saveKey('bsc_projects', state.projects);
+      showToast('Status updated');
+      render();
+    };
+  });
+  document.querySelectorAll('.hours-logged').forEach(inp=>{
+    inp.onchange = async () => {
+      const p = state.projects.find(x=>x.id===inp.dataset.id);
+      const v = parseFloat(inp.value);
+      p.hoursLogged = isNaN(v) ? null : v;
+      await saveKey('bsc_projects', state.projects);
+      render();
+    };
+  });
+  document.querySelectorAll('.submit-invoice-btn').forEach(btn=>{
+    btn.onclick = async () => {
+      const p = state.projects.find(x=>x.id===btn.dataset.id);
+      p.invoiceSubmitted = true;
+      p.invoiceSubmittedAt = Date.now();
+      if(p.hoursLogged==null) p.hoursLogged = p.committedHours;
+      await saveKey('bsc_projects', state.projects);
+      showToast('Invoice submitted');
+      render();
+    };
+  });
+}
+
+/* ============================= FREELANCER: PAYMENT INFO ============================= */
+function renderFreelancerPayment(){
+  const existing = state.payments[state.currentUser.id] || {};
+  const method = existing.method || 'ach';
+  return `
+    <div class="warn-banner">
+      🔒 Venmo, Zelle, and PayPal are fine to enter here since they're just a handle, not full account details. For ACH, use the secure link instead of typing bank info into this dashboard.
+    </div>
+    <div class="card">
+      <div class="card-title">Payment Method</div>
+      <div class="card-sub">Choose how you'd like to be paid.</div>
+      <div class="method-toggle" id="method-toggle">
+        ${['ach','venmo','zelle','paypal'].map(m=>`
+          <button type="button" class="method-btn ${method===m?'active':''}" data-method="${m}">${({ach:'ACH / Bank',venmo:'Venmo',zelle:'Zelle',paypal:'PayPal'})[m]}</button>
+        `).join('')}
+      </div>
+      <div class="payment-fields" id="payment-fields">
+        ${renderPaymentFields(method, existing)}
+      </div>
+      <button class="btn" id="save-payment" style="margin-top:14px;">Save Payment Info</button>
+      ${existing.updatedAt ? `<div class="card-sub" style="margin-top:8px;">Last updated ${fmtDate(existing.updatedAt)}</div>` : ''}
+    </div>
+  `;
+}
+function renderPaymentFields(method, existing){
+  if(method==='ach'){
+    const link = state.settings.achUploadLink;
+    return `
+      <div class="card-sub" style="margin-bottom:10px;">ACH bank details are collected through a secure link, not this dashboard, so your account and routing numbers never pass through here.</div>
+      ${link
+        ? `<a class="btn secondary" href="${escapeHtml(link)}" target="_blank" rel="noopener">Open Secure ACH Form</a>`
+        : `<div class="card-sub">The secure ACH link hasn't been added yet, check back soon.</div>`
+      }
+    `;
+  }
+  if(method==='venmo'){
+    return `<div class="field"><label>Venmo username</label><input type="text" id="pf-handle" placeholder="@yourname" value="${escapeHtml(existing.handle||'')}"></div>`;
+  }
+  if(method==='zelle'){
+    return `<div class="field"><label>Zelle email or phone</label><input type="text" id="pf-handle" value="${escapeHtml(existing.handle||'')}"></div>`;
+  }
+  if(method==='paypal'){
+    return `<div class="field"><label>PayPal email</label><input type="email" id="pf-handle" value="${escapeHtml(existing.handle||'')}"></div>`;
+  }
+  return '';
+}
+function bindFreelancerPayment(){
+  let currentMethod = (state.payments[state.currentUser.id]||{}).method || 'ach';
+  document.querySelectorAll('.method-btn').forEach(btn=>{
+    btn.onclick = () => {
+      currentMethod = btn.dataset.method;
+      document.querySelectorAll('.method-btn').forEach(b=>b.classList.toggle('active', b===btn));
+      document.getElementById('payment-fields').innerHTML = renderPaymentFields(currentMethod, state.payments[state.currentUser.id]||{});
+    };
+  });
+  document.getElementById('save-payment').onclick = async () => {
+    const data = { method: currentMethod, updatedAt: Date.now() };
+    if(currentMethod!=='ach'){
+      data.handle = document.getElementById('pf-handle').value.trim();
+    }
+    state.payments[state.currentUser.id] = data;
+    await saveKey('bsc_payments', state.payments);
+    showToast(currentMethod==='ach' ? 'Payment method saved. Use the secure link to send your bank details.' : 'Payment info saved');
+    render();
+  };
+}
+
+/* ============================= FREELANCER: DOCUMENTS ============================= */
+function renderFreelancerDocuments(){
+  const f = state.freelancers.find(x=>x.id===state.currentUser.id) || {};
+  const link = state.settings.docUploadLink;
+
+  const ndaStatusPill = f.ndaReceived
+    ? `<span class="pill paid">Received</span>`
+    : f.ndaSubmittedAt
+      ? `<span class="pill warn">Submitted, awaiting confirmation</span>`
+      : `<span class="pill unpaid">Not yet submitted</span>`;
+
+  const myInvoices = state.projects.filter(p=>p.claimedBy===state.currentUser.id && p.invoiceSubmitted);
+
+  return `
+    <div class="card">
+      <div class="card-title">NDA</div>
+      <div class="card-sub">Sign the copy attached to your welcome email, then send it back using the link below.</div>
+      <div style="margin:10px 0;">${ndaStatusPill}</div>
+      <div class="row">
+        ${link
+          ? `<a class="btn secondary" href="${escapeHtml(link)}" target="_blank" rel="noopener">Open Upload Link</a>`
+          : `<span class="card-sub">The upload link hasn't been added yet, check back soon.</span>`
+        }
+        ${!f.ndaReceived ? `<button class="btn" id="nda-submitted-btn">I've Sent My Signed NDA</button>` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Other Documents</div>
+      <div class="card-sub">Use this same link for anything else you need to send over.</div>
+      ${link
+        ? `<a class="btn secondary" href="${escapeHtml(link)}" target="_blank" rel="noopener" style="margin-top:8px;">Open Upload Link</a>`
+        : `<div class="card-sub">The upload link hasn't been added yet, check back soon.</div>`
+      }
+    </div>
+
+    <h2 class="section-title">Your Invoices</h2>
+    ${myInvoices.length===0 ? `<div class="empty">No invoices submitted yet. These show up here once you submit one from My Projects.</div>` : `
+      <table>
+        <thead><tr><th>Project</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          ${myInvoices.map(p=>{
+            const amt = (p.hoursLogged!=null?p.hoursLogged:p.committedHours) * p.rate;
+            return `<tr>
+              <td>${escapeHtml(p.title)}</td>
+              <td>${p.hoursLogged!=null?p.hoursLogged:p.committedHours}</td>
+              <td>${fmtMoney(amt)}</td>
+              <td><span class="pill ${p.paid?'paid':'unpaid'}">${p.paid?'Paid':'Awaiting Payment'}</span></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `}
+  `;
+}
+function bindFreelancerDocuments(){
+  const btn = document.getElementById('nda-submitted-btn');
+  if(btn){
+    btn.onclick = async () => {
+      const f = state.freelancers.find(x=>x.id===state.currentUser.id);
+      f.ndaSubmittedAt = Date.now();
+      await saveKey('bsc_freelancers', state.freelancers);
+      showToast("Thanks, we'll confirm once it's received");
+      render();
+    };
+  }
+}
+
+/* ============================= ADMIN: DOCUMENTS ============================= */
+function renderAdminDocuments(){
+  const link = state.settings.docUploadLink || '';
+  const achLink = state.settings.achUploadLink || '';
+  const rows = state.freelancers.map(f=>{
+    const statusPill = f.ndaReceived
+      ? `<span class="pill paid">Received</span>`
+      : f.ndaSubmittedAt
+        ? `<span class="pill warn">Submitted ${fmtDate(f.ndaSubmittedAt)}</span>`
+        : `<span class="pill unpaid">Not submitted</span>`;
+    return `
+      <tr>
+        <td><b>${escapeHtml(f.name)}</b></td>
+        <td>${statusPill}</td>
+        <td>
+          ${f.ndaReceived
+            ? `<button class="btn secondary reset-nda" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Undo</button>`
+            : `<button class="btn mark-nda-received" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Mark Received</button>`
+          }
+        </td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-title">Secure Upload Link</div>
+      <div class="card-sub">Paste the link to your Google Form (or Dropbox Request) here. This is what freelancers use to send back their signed NDA and other documents.</div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><input type="text" id="doc-link-input" value="${escapeHtml(link)}" placeholder="https://forms.gle/..."></div>
+        <button class="btn" id="save-doc-link">Save</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Secure ACH Link</div>
+      <div class="card-sub">Paste a link to a secure form for collecting bank account and routing numbers (never store these directly in this dashboard).</div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><input type="text" id="ach-link-input" value="${escapeHtml(achLink)}" placeholder="https://forms.gle/..."></div>
+        <button class="btn" id="save-ach-link">Save</button>
+      </div>
+    </div>
+
+    <h2 class="section-title">NDA Status</h2>
+    ${state.freelancers.length===0 ? '<div class="empty">No freelancers on the roster yet.</div>' : `
+      <table>
+        <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `}
+  `;
+}
+function bindAdminDocuments(){
+  document.getElementById('save-doc-link').onclick = async () => {
+    const link = document.getElementById('doc-link-input').value.trim();
+    state.settings.docUploadLink = link;
+    await saveKey('bsc_settings', state.settings);
+    showToast('Upload link saved');
+    render();
+  };
+  document.getElementById('save-ach-link').onclick = async () => {
+    const link = document.getElementById('ach-link-input').value.trim();
+    state.settings.achUploadLink = link;
+    await saveKey('bsc_settings', state.settings);
+    showToast('ACH link saved');
+    render();
+  };
+  document.querySelectorAll('.mark-nda-received').forEach(btn=>{
+    btn.onclick = async () => {
+      const f = state.freelancers.find(x=>x.id===btn.dataset.id);
+      f.ndaReceived = true;
+      f.ndaReceivedAt = Date.now();
+      await saveKey('bsc_freelancers', state.freelancers);
+      showToast('Marked as received');
+      render();
+    };
+  });
+  document.querySelectorAll('.reset-nda').forEach(btn=>{
+    btn.onclick = async () => {
+      const f = state.freelancers.find(x=>x.id===btn.dataset.id);
+      f.ndaReceived = false;
+      await saveKey('bsc_freelancers', state.freelancers);
+      render();
+    };
+  });
+}
+
+/* ============================= MESSAGES (shared logic) ============================= */
+function countFreelancerUnread(freelancerId){
+  return state.messages.filter(m=>m.freelancerId===freelancerId && m.sender==='admin' && !m.readByFreelancer).length;
+}
+function countAdminUnread(){
+  return state.messages.filter(m=>m.sender==='freelancer' && !m.readByAdmin).length;
+}
+
+function renderFreelancerMessages(){
+  const mine = state.messages.filter(m=>m.freelancerId===state.currentUser.id).sort((a,b)=>a.ts-b.ts);
+  return `
+    <div class="card-sub" style="margin-bottom:8px;">Message the Bayard Street Creative team directly about any project or question.</div>
+    <div class="thread" id="thread">
+      ${mine.length===0 ? `<div class="empty" style="border:none;padding:30px;">No messages yet. Say hello!</div>` :
+        mine.map(m=>`
+          <div class="msg ${m.sender==='freelancer'?'mine':'theirs'}">
+            <span class="who-tag">${m.sender==='freelancer'?escapeHtml(state.currentUser.name):'BSC Team'}</span>
+            ${escapeHtml(m.text)}
+            <div class="ts">${fmtTime(m.ts)}</div>
+          </div>
+        `).join('')
+      }
+    </div>
+    <div class="compose">
+      <textarea id="msg-input" placeholder="Type a message&hellip;"></textarea>
+      <button class="btn" id="send-msg">Send</button>
+    </div>
+  `;
+}
+function bindFreelancerMessages(){
+  const thread = document.getElementById('thread');
+  if(thread) thread.scrollTop = thread.scrollHeight;
+  // mark katie's messages as read
+  let changed = false;
+  state.messages.forEach(m=>{
+    if(m.freelancerId===state.currentUser.id && m.sender==='admin' && !m.readByFreelancer){
+      m.readByFreelancer = true; changed = true;
+    }
+  });
+  if(changed) saveKey('bsc_messages', state.messages);
+
+  document.getElementById('send-msg').onclick = async () => {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if(!text) return;
+    state.messages.push({
+      id: uid(), freelancerId: state.currentUser.id, sender:'freelancer',
+      text, ts: Date.now(), readByAdmin:false, readByFreelancer:true
+    });
+    await saveKey('bsc_messages', state.messages);
+    render();
+  };
+}
+
+function renderAdminMessages(){
+  const threadFreelancerIds = [...new Set(state.messages.map(m=>m.freelancerId))];
+  // include all freelancers too, even with no messages yet
+  state.freelancers.forEach(f=>{ if(!threadFreelancerIds.includes(f.id)) threadFreelancerIds.push(f.id); });
+
+  if(!state.activeThreadId && threadFreelancerIds.length>0) state.activeThreadId = threadFreelancerIds[0];
+
+  const list = threadFreelancerIds.map(fid=>{
+    const f = state.freelancers.find(x=>x.id===fid);
+    const name = f ? f.name : 'Unknown';
+    const msgs = state.messages.filter(m=>m.freelancerId===fid).sort((a,b)=>a.ts-b.ts);
+    const last = msgs[msgs.length-1];
+    const unread = msgs.some(m=>m.sender==='freelancer' && !m.readByAdmin);
+    return `
+      <div class="thread-list-item ${state.activeThreadId===fid?'active':''}" data-fid="${fid}">
+        <div>
+          <div class="name">${escapeHtml(name)}</div>
+          <div class="preview">${last?escapeHtml(last.text):'No messages yet'}</div>
+        </div>
+        ${unread?'<span class="dot-unread"></span>':''}
+      </div>`;
+  }).join('');
+
+  const activeMsgs = state.messages.filter(m=>m.freelancerId===state.activeThreadId).sort((a,b)=>a.ts-b.ts);
+  const activeFreelancer = state.freelancers.find(x=>x.id===state.activeThreadId);
+
+  return `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;max-height:460px;overflow-y:auto;">
+        ${list || '<div class="empty">No freelancers yet</div>'}
+      </div>
+      <div style="flex:2;min-width:280px;">
+        ${activeFreelancer ? `
+          <div class="card-sub" style="margin-bottom:8px;">Conversation with <b>${escapeHtml(activeFreelancer.name)}</b></div>
+          <div class="thread" id="thread">
+            ${activeMsgs.length===0 ? `<div class="empty" style="border:none;padding:30px;">No messages yet</div>` :
+              activeMsgs.map(m=>`
+                <div class="msg ${m.sender==='admin'?'mine':'theirs'}">
+                  <span class="who-tag">${m.sender==='admin'?'You':escapeHtml(activeFreelancer.name)}</span>
+                  ${escapeHtml(m.text)}
+                  <div class="ts">${fmtTime(m.ts)}</div>
+                </div>
+              `).join('')
+            }
+          </div>
+          <div class="compose">
+            <textarea id="msg-input" placeholder="Reply to ${escapeHtml(activeFreelancer.name)}&hellip;"></textarea>
+            <button class="btn" id="send-msg">Send</button>
+          </div>
+        ` : `<div class="empty">Select a conversation</div>`}
+      </div>
+    </div>
+  `;
+}
+function bindAdminMessages(){
+  document.querySelectorAll('.thread-list-item').forEach(el=>{
+    el.onclick = () => { state.activeThreadId = el.dataset.fid; render(); };
+  });
+  const thread = document.getElementById('thread');
+  if(thread) thread.scrollTop = thread.scrollHeight;
+
+  let changed = false;
+  state.messages.forEach(m=>{
+    if(m.freelancerId===state.activeThreadId && m.sender==='freelancer' && !m.readByAdmin){
+      m.readByAdmin = true; changed = true;
+    }
+  });
+  if(changed) saveKey('bsc_messages', state.messages);
+
+  const sendBtn = document.getElementById('send-msg');
+  if(sendBtn){
+    sendBtn.onclick = async () => {
+      const input = document.getElementById('msg-input');
+      const text = input.value.trim();
+      if(!text || !state.activeThreadId) return;
+      state.messages.push({
+        id: uid(), freelancerId: state.activeThreadId, sender:'admin',
+        text, ts: Date.now(), readByAdmin:true, readByFreelancer:false
+      });
+      await saveKey('bsc_messages', state.messages);
+      render();
+    };
+  }
+}
+
+/* ============================= ADMIN: ROSTER ============================= */
+function renderAdminRoster(){
+  const rows = state.freelancers.map(f=>{
+    const pay = state.payments[f.id];
+    const activeCount = state.projects.filter(p=>p.claimedBy===f.id && p.status!=='complete').length;
+    return `
+      <tr>
+        <td><b>${escapeHtml(f.name)}</b></td>
+        <td>${escapeHtml(f.email)}</td>
+        <td>${f.pin ? `<span class="pill paid">PIN set</span>` : `<span class="pill unpaid">Not set yet</span>`}</td>
+        <td>${pay ? `<span class="pill paid">${({ach:'ACH',venmo:'Venmo',zelle:'Zelle',paypal:'PayPal'})[pay.method]} on file</span>` : `<span class="pill unpaid">Not set</span>`}</td>
+        <td>${activeCount}</td>
+        <td style="white-space:nowrap;">
+          ${f.pin ? `<button class="btn secondary reset-pin" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Reset PIN</button>` : ''}
+          <button class="btn danger remove-freelancer" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Remove</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-title">Add a Freelancer</div>
+      <div class="card-sub">They'll create their own PIN the first time they log in, or you can set a starting PIN now.</div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><label>Full name</label><input type="text" id="new-f-name"></div>
+        <div class="field"><label>Email</label><input type="email" id="new-f-email"></div>
+        <div class="field"><label>Starting PIN (optional)</label><input type="text" inputmode="numeric" id="new-f-pin" placeholder="4+ digits"></div>
+        <button class="btn" id="add-freelancer">Add</button>
+      </div>
+    </div>
+    <h2 class="section-title">Roster (${state.freelancers.length})</h2>
+    ${state.freelancers.length===0 ? '<div class="empty">No freelancers added yet.</div>' : `
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>PIN</th><th>Payment Info</th><th>Active Projects</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `}
+  `;
+}
+function bindAdminRoster(){
+  document.getElementById('add-freelancer').onclick = async () => {
+    const name = document.getElementById('new-f-name').value.trim();
+    const email = document.getElementById('new-f-email').value.trim();
+    const pin = document.getElementById('new-f-pin').value.trim();
+    if(!name || !email){ showToast('Enter name and email'); return; }
+    if(pin && pin.length < 4){ showToast('PIN must be at least 4 digits, or leave blank'); return; }
+    state.freelancers.push({ id: uid(), name, email, pin: pin || null, joinedAt: Date.now() });
+    await saveKey('bsc_freelancers', state.freelancers);
+    showToast('Freelancer added');
+    render();
+  };
+  document.querySelectorAll('.remove-freelancer').forEach(btn=>{
+    btn.onclick = async () => {
+      if(!confirm('Remove this freelancer from the roster? Their project history will be kept.')) return;
+      state.freelancers = state.freelancers.filter(f=>f.id!==btn.dataset.id);
+      await saveKey('bsc_freelancers', state.freelancers);
+      render();
+    };
+  });
+  document.querySelectorAll('.reset-pin').forEach(btn=>{
+    btn.onclick = async () => {
+      const f = state.freelancers.find(x=>x.id===btn.dataset.id);
+      if(!confirm(`Reset ${f.name}'s PIN? They'll be asked to create a new one next time they log in.`)) return;
+      f.pin = null;
+      await saveKey('bsc_freelancers', state.freelancers);
+      showToast('PIN reset');
+      render();
+    };
+  });
+}
+
+/* ============================= ADMIN: POST A JOB ============================= */
+function renderAdminPostJob(){
+  const freelancerCheckboxes = state.freelancers.map(f=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;cursor:pointer;">
+      <input type="checkbox" class="target-check" value="${f.id}" style="width:auto;">
+      ${escapeHtml(f.name)}
+    </label>
+  `).join('');
+
+  return `
+    <div class="card">
+      <div class="card-title">New Job Alert</div>
+      <div class="card-sub">Choose who this job is visible to, then post it.</div>
+      <div class="field"><label>Project title</label><input type="text" id="job-title" placeholder="e.g. Bellesa Boutique, Priority Retouching"></div>
+      <div class="field"><label>Brief / notes</label><textarea id="job-brief" rows="4" placeholder="Describe the project, style notes, deliverable specs, etc."></textarea></div>
+      <div class="field"><label>Google Drive folder link</label><input type="text" id="job-drive" placeholder="https://drive.google.com/..."></div>
+      <div class="row">
+        <div class="field"><label>Rate ($/hr)</label><input type="number" min="0" step="0.01" id="job-rate" placeholder="80"></div>
+        <div class="field"><label>Hours available</label><input type="text" id="job-hours" placeholder="e.g. 17 - 21"></div>
+        <div class="field"><label>Timeline</label><input type="text" id="job-timeline" placeholder="e.g. Due July 10"></div>
+      </div>
+
+      <div class="field" style="margin-top:6px;">
+        <label>Who can see this job?</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13.5px;font-weight:500;color:var(--dark);cursor:pointer;">
+          <input type="checkbox" id="target-all" style="width:auto;" checked>
+          Send to everyone on the roster
+        </label>
+        <div id="target-list" style="display:${state.freelancers.length?'grid':'none'};grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;opacity:0.45;pointer-events:none;">
+          ${freelancerCheckboxes || '<div class="card-sub">No freelancers on the roster yet.</div>'}
+        </div>
+      </div>
+
+      <button class="btn" id="post-job" style="margin-top:6px;">Post Job Alert</button>
+    </div>
+
+    ${state.lastPostedJob ? renderNotifyCard(state.lastPostedJob) : ''}
+  `;
+}
+
+function renderNotifyCard(job){
+  const targets = job.targetIds && job.targetIds.length
+    ? state.freelancers.filter(f=>job.targetIds.includes(f.id))
+    : state.freelancers;
+  const emails = targets.map(f=>f.email).filter(Boolean).join(',');
+  return `
+    <div class="card" style="border-color:var(--teal);">
+      <div class="card-title">✅ Posted: ${escapeHtml(job.title)}</div>
+      <div class="card-sub">Visible to ${targets.length} freelancer${targets.length===1?'':'s'}. Since this dashboard can't auto-send email or text, use the button below to open a pre-filled email in your own inbox.</div>
+      <button class="btn secondary" id="notify-email-btn" style="margin-top:6px;">📧 Notify by Email</button>
+    </div>
+  `;
+}
+function bindAdminPostJob(){
+  const targetAll = document.getElementById('target-all');
+  const targetList = document.getElementById('target-list');
+  if(targetAll && targetList){
+    targetAll.onchange = () => {
+      if(targetAll.checked){
+        targetList.style.opacity = '0.45';
+        targetList.style.pointerEvents = 'none';
+      } else {
+        targetList.style.opacity = '1';
+        targetList.style.pointerEvents = 'auto';
+      }
+    };
+  }
+
+  document.getElementById('post-job').onclick = async () => {
+    const title = document.getElementById('job-title').value.trim();
+    const brief = document.getElementById('job-brief').value.trim();
+    const driveLink = document.getElementById('job-drive').value.trim();
+    const rate = parseFloat(document.getElementById('job-rate').value);
+    const totalHours = document.getElementById('job-hours').value.trim();
+    const timeline = document.getElementById('job-timeline').value.trim();
+    if(!title || !rate || !totalHours || !timeline){
+      showToast('Fill in title, rate, hours, and timeline'); return;
+    }
+
+    let targetIds = [];
+    if(!targetAll.checked){
+      targetIds = Array.from(document.querySelectorAll('.target-check:checked')).map(el=>el.value);
+      if(targetIds.length===0){
+        showToast('Select at least one freelancer, or check "Send to everyone"'); return;
+      }
+    }
+
+    const job = {
+      id: uid(), title, brief, driveLink, rate, totalHours, timeline,
+      status:'open', createdAt: Date.now(), targetIds
+    };
+    state.projects.push(job);
+    await saveKey('bsc_projects', state.projects);
+    state.lastPostedJob = job;
+    showToast('Job posted!');
+    render();
+  };
+
+  const notifyBtn = document.getElementById('notify-email-btn');
+  if(notifyBtn){
+    notifyBtn.onclick = () => {
+      const job = state.lastPostedJob;
+      const targets = job.targetIds && job.targetIds.length
+        ? state.freelancers.filter(f=>job.targetIds.includes(f.id))
+        : state.freelancers;
+      const emails = targets.map(f=>f.email).filter(Boolean).join(',');
+      const subject = `New job available: ${job.title}`;
+      const body =
+`Hi there,
+
+A new project is available:
+
+${job.title}
+Rate: ${fmtMoney(job.rate)}/hr
+Hours available: ${job.totalHours}
+Timeline: ${job.timeline}
+
+${job.brief ? job.brief + '\n\n' : ''}${job.driveLink ? 'Brief folder: ' + job.driveLink + '\n\n' : ''}Log in to the Freelancer Hub to accept and claim your hours.
+
+Thanks,
+Katie`;
+      const mailto = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailto;
+    };
+  }
+}
+
+function targetingLabel(p){
+  if(!p.targetIds || p.targetIds.length===0) return ' · Sent to everyone';
+  const names = state.freelancers.filter(f=>p.targetIds.includes(f.id)).map(f=>f.name);
+  return ' · Sent to ' + (names.length ? names.join(', ') : `${p.targetIds.length} freelancer(s)`);
+}
+
+/* ============================= ADMIN: ALL PROJECTS ============================= */
+function renderAdminAllProjects(){
+  if(state.projects.length===0) return `<div class="empty">No projects posted yet. Head to "Post a Job" to create one.</div>`;
+  const sorted = [...state.projects].sort((a,b)=>b.createdAt-a.createdAt);
+  return sorted.map(p=>{
+    const invoiceAmt = p.claimedBy ? (p.hoursLogged!=null?p.hoursLogged:p.committedHours||0) * p.rate : 0;
+    return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="card-title">${escapeHtml(p.title)}</div>
+          <div class="card-sub">${p.claimedByName ? 'Claimed by ' + escapeHtml(p.claimedByName) : 'Unclaimed'}${p.status==='open' ? targetingLabel(p) : ''}</div>
+        </div>
+        <span class="pill ${p.status}">${STATUS_LABELS[p.status]}</span>
+      </div>
+      <div class="meta-row">
+        <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(p.rate)}/hr</span></div>
+        <div class="meta-item"><span class="k">Hours</span><span class="v">${p.committedHours ? p.committedHours + ' committed' : p.totalHours + ' available'}</span></div>
+        <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(p.timeline)}</span></div>
+        ${p.hoursLogged!=null ? `<div class="meta-item"><span class="k">Hours logged</span><span class="v">${p.hoursLogged}</span></div>` : ''}
+      </div>
+      ${p.driveLink ? `<a class="drive-link" href="${escapeHtml(p.driveLink)}" target="_blank" rel="noopener">📁 Project folder</a>` : ''}
+      ${p.claimedBy ? `
+        <div class="row" style="margin-top:12px;">
+          <div class="meta-item"><span class="k">Invoice</span><span class="v">${fmtMoney(invoiceAmt)}</span></div>
+          ${p.invoiceSubmitted ? `<span class="pill ${p.paid?'paid':'unpaid'}" style="margin-left:auto;">${p.paid?'Paid':'Awaiting Payment'}</span>` : '<span class="card-sub" style="margin-left:auto;">Invoice not yet submitted</span>'}
+          ${p.invoiceSubmitted && !p.paid ? `<button class="btn mark-paid-btn" data-id="${p.id}">Mark Paid</button>` : ''}
+        </div>
+      ` : `
+        <div style="margin-top:12px;">
+          <button class="btn danger cancel-job-btn" data-id="${p.id}" style="padding:6px 12px;font-size:12.5px;">Cancel job</button>
+        </div>
+      `}
+    </div>`;
+  }).join('');
+}
+function bindAdminAllProjects(){
+  document.querySelectorAll('.mark-paid-btn').forEach(btn=>{
+    btn.onclick = async () => {
+      const p = state.projects.find(x=>x.id===btn.dataset.id);
+      p.paid = true; p.paidAt = Date.now();
+      await saveKey('bsc_projects', state.projects);
+      showToast('Marked as paid');
+      render();
+    };
+  });
+  document.querySelectorAll('.cancel-job-btn').forEach(btn=>{
+    btn.onclick = async () => {
+      if(!confirm('Cancel and remove this open job?')) return;
+      state.projects = state.projects.filter(p=>p.id!==btn.dataset.id);
+      await saveKey('bsc_projects', state.projects);
+      render();
+    };
+  });
+}
+
+/* ============================= INIT ============================= */
+(async function init(){
+  document.getElementById('root').innerHTML = `<div class="app"><div class="empty" style="border:none;margin-top:100px;">Loading&hellip;</div></div>`;
+  await loadAll();
+  render();
+})();
+</script>
+</body>
+</html>
