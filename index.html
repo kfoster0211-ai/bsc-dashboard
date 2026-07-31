@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -263,7 +264,8 @@ const STATUS_ORDER = ['claimed','in_progress','uploaded','complete'];
 /* ============================= APP STATE ============================= */
 const state = {
   freelancers: [],
-  projects: [],
+  projects: [],   // job postings (title, rate, totalHoursBudget, brief, driveLink, timeline, targetIds, closed)
+  claims: [],     // individual freelancer claims against a job's hour budget
   messages: [],
   payments: {},   // { freelancerId: {method, ...fields, updatedAt} }
   settings: {},   // { docUploadLink }
@@ -273,23 +275,83 @@ const state = {
 };
 
 async function loadAll(){
-  const [freelancers, projects, messages, payments, settings] = await Promise.all([
+  const [freelancers, projects, claims, messages, payments, settings] = await Promise.all([
     loadKey('bsc_freelancers', []),
     loadKey('bsc_projects', []),
+    loadKey('bsc_claims', []),
     loadKey('bsc_messages', []),
     loadKey('bsc_payments', {}),
     loadKey('bsc_settings', {}),
   ]);
   state.freelancers = freelancers;
   state.projects = projects;
+  state.claims = claims;
   state.messages = messages;
   state.payments = payments;
   state.settings = settings;
+  await migrateLegacyData();
+}
+
+// One-time, idempotent migration: converts old single-claim-per-job records
+// (from before multi-claim support) into proper claim records, and backfills
+// totalHoursBudget from the old free-text hours field. Safe to run every load.
+async function migrateLegacyData(){
+  let projectsChanged = false;
+  let claimsChanged = false;
+
+  state.projects.forEach(p=>{
+    if(p.totalHoursBudget == null){
+      let budget = null;
+      if(p.totalHours != null){
+        const parts = String(p.totalHours).split('-').map(s=>parseFloat(s.trim())).filter(n=>!isNaN(n));
+        budget = parts.length ? Math.max(...parts) : null;
+      }
+      if(budget == null) budget = p.committedHours || 0;
+      p.totalHoursBudget = budget;
+      projectsChanged = true;
+    }
+    if(p.claimedBy && !state.claims.some(c => c.jobId === p.id && c.freelancerId === p.claimedBy)){
+      state.claims.push({
+        id: uid(),
+        jobId: p.id,
+        freelancerId: p.claimedBy,
+        freelancerName: p.claimedByName || '',
+        rate: p.rate,
+        committedHours: p.committedHours || 0,
+        hoursLogged: p.hoursLogged != null ? p.hoursLogged : null,
+        status: (p.status && STATUS_ORDER.includes(p.status)) ? p.status : 'claimed',
+        claimedAt: p.claimedAt || Date.now(),
+        invoiceSubmitted: !!p.invoiceSubmitted,
+        invoiceSubmittedAt: p.invoiceSubmittedAt || null,
+        paid: !!p.paid,
+        paidAt: p.paidAt || null,
+      });
+      claimsChanged = true;
+    }
+  });
+
+  if(projectsChanged) await saveKey('bsc_projects', state.projects);
+  if(claimsChanged) await saveKey('bsc_claims', state.claims);
 }
 
 async function refreshAndRender(){
   await loadAll();
   render();
+}
+
+/* ============================= JOB / CLAIM HELPERS ============================= */
+function claimsForJob(jobId){
+  return state.claims.filter(c => c.jobId === jobId);
+}
+function claimedHoursForJob(jobId){
+  return claimsForJob(jobId).reduce((sum, c) => sum + (c.committedHours || 0), 0);
+}
+function remainingHoursForJob(job){
+  const remaining = (job.totalHoursBudget || 0) - claimedHoursForJob(job.id);
+  return Math.max(0, Math.round(remaining * 100) / 100);
+}
+function isJobOpen(job){
+  return !job.closed && remainingHoursForJob(job) > 0;
 }
 
 /* ============================= RENDER ROOT ============================= */
@@ -447,6 +509,7 @@ function renderApp(){
         ['roster','Roster'],
         ['post','Post a Job'],
         ['allprojects','All Projects'],
+        ['invoices','Invoices'],
         ['documents','Documents'],
         ['messages','Messages'],
       ]
@@ -495,6 +558,7 @@ function renderTabContent(){
     if(state.tab==='roster') return renderAdminRoster();
     if(state.tab==='post') return renderAdminPostJob();
     if(state.tab==='allprojects') return renderAdminAllProjects();
+    if(state.tab==='invoices') return renderAdminInvoices();
     if(state.tab==='documents') return renderAdminDocuments();
     if(state.tab==='messages') return renderAdminMessages();
   } else {
@@ -528,6 +592,7 @@ function bindTabSpecificEvents(){
     if(state.tab==='roster') bindAdminRoster();
     if(state.tab==='post') bindAdminPostJob();
     if(state.tab==='allprojects') bindAdminAllProjects();
+    if(state.tab==='invoices') bindAdminInvoices();
     if(state.tab==='documents') bindAdminDocuments();
     if(state.tab==='messages') bindAdminMessages();
   } else {
@@ -542,32 +607,38 @@ function bindTabSpecificEvents(){
 /* ============================= FREELANCER: AVAILABLE JOBS ============================= */
 function renderFreelancerJobs(){
   const open = state.projects.filter(p=>{
-    if(p.status!=='open') return false;
-    if(!p.targetIds || p.targetIds.length===0) return true; // no targeting = visible to all
-    return p.targetIds.includes(state.currentUser.id);
+    if(!isJobOpen(p)) return false;
+    if(!p.targetIds || p.targetIds.length===0){ /* visible to all */ }
+    else if(!p.targetIds.includes(state.currentUser.id)) return false;
+    // hide if this freelancer already has a claim on this job (manage it from My Projects instead)
+    if(state.claims.some(c => c.jobId===p.id && c.freelancerId===state.currentUser.id)) return false;
+    return true;
   });
   if(open.length===0){
     return `<div class="empty">No open jobs right now. Check back soon, or watch your Messages tab for updates.</div>`;
   }
-  return open.map(p=>`
+  return open.map(p=>{
+    const remaining = remainingHoursForJob(p);
+    return `
     <div class="card">
       <div class="card-title">${escapeHtml(p.title)}</div>
       <div class="meta-row">
         <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(p.rate)}/hr</span></div>
-        <div class="meta-item"><span class="k">Hours Available</span><span class="v">${escapeHtml(p.totalHours)}</span></div>
+        <div class="meta-item"><span class="k">Hours Remaining</span><span class="v">${remaining} of ${p.totalHoursBudget}</span></div>
         <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(p.timeline)}</span></div>
       </div>
       ${p.brief ? `<div class="brief-text">${escapeHtml(p.brief)}</div>` : ''}
       ${p.driveLink ? `<a class="drive-link" href="${escapeHtml(p.driveLink)}" target="_blank" rel="noopener">📁 View brief folder</a>` : ''}
       <div class="row" style="margin-top:14px;">
         <div class="field">
-          <label>Hours you can commit to</label>
-          <input type="number" min="0.5" step="0.5" class="claim-hours" id="hrs-${p.id}" placeholder="e.g. 12">
+          <label>Hours you can commit to (up to ${remaining})</label>
+          <input type="number" min="0.5" step="0.5" max="${remaining}" class="claim-hours" id="hrs-${p.id}" placeholder="e.g. 5">
         </div>
         <button class="btn claim-btn" data-id="${p.id}">Accept &amp; Claim</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 function bindFreelancerJobs(){
   document.querySelectorAll('.claim-btn').forEach(btn=>{
@@ -577,12 +648,26 @@ function bindFreelancerJobs(){
       const hours = parseFloat(hoursInput.value);
       if(!hours || hours<=0){ showToast('Enter how many hours you can commit to'); return; }
       const p = state.projects.find(x=>x.id===id);
-      p.status = 'claimed';
-      p.claimedBy = state.currentUser.id;
-      p.claimedByName = state.currentUser.name;
-      p.committedHours = hours;
-      p.claimedAt = Date.now();
-      await saveKey('bsc_projects', state.projects);
+      const remaining = remainingHoursForJob(p);
+      if(hours > remaining){
+        showToast(`Only ${remaining} hours are left on this job. Someone may have just claimed some.`);
+        render();
+        return;
+      }
+      state.claims.push({
+        id: uid(),
+        jobId: p.id,
+        freelancerId: state.currentUser.id,
+        freelancerName: state.currentUser.name,
+        rate: p.rate,
+        committedHours: hours,
+        hoursLogged: null,
+        status: 'claimed',
+        claimedAt: Date.now(),
+        invoiceSubmitted: false, invoiceSubmittedAt: null,
+        paid: false, paidAt: null,
+      });
+      await saveKey('bsc_claims', state.claims);
       showToast('Job claimed! Find it under My Projects.');
       state.tab = 'myprojects';
       render();
@@ -592,47 +677,50 @@ function bindFreelancerJobs(){
 
 /* ============================= FREELANCER: MY PROJECTS ============================= */
 function renderFreelancerMyProjects(){
-  const mine = state.projects.filter(p=>p.claimedBy===state.currentUser.id);
+  const mine = state.claims.filter(c=>c.freelancerId===state.currentUser.id);
   if(mine.length===0){
     return `<div class="empty">You haven't claimed any projects yet. Check the Available Jobs tab.</div>`;
   }
-  return mine.map(p=>{
-    const invoiceAmt = (p.hoursLogged!=null ? p.hoursLogged : p.committedHours) * p.rate;
+  return mine.sort((a,b)=>b.claimedAt-a.claimedAt).map(c=>{
+    const job = state.projects.find(p=>p.id===c.jobId) || {};
+    const invoiceAmt = (c.hoursLogged!=null ? c.hoursLogged : c.committedHours) * c.rate;
+    const hoursRemaining = Math.max(0, Math.round((c.committedHours - (c.hoursLogged||0)) * 100) / 100);
     return `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div>
-          <div class="card-title">${escapeHtml(p.title)}</div>
-          <div class="card-sub">Claimed ${fmtDate(p.claimedAt)}</div>
+          <div class="card-title">${escapeHtml(job.title || '(job no longer listed)')}</div>
+          <div class="card-sub">Claimed ${fmtDate(c.claimedAt)}</div>
         </div>
-        <span class="pill ${p.status}">${STATUS_LABELS[p.status]}</span>
+        <span class="pill ${c.status}">${STATUS_LABELS[c.status]}</span>
       </div>
       <div class="meta-row">
-        <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(p.rate)}/hr</span></div>
-        <div class="meta-item"><span class="k">Committed Hours</span><span class="v">${p.committedHours}</span></div>
-        <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(p.timeline)}</span></div>
+        <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(c.rate)}/hr</span></div>
+        <div class="meta-item"><span class="k">Committed Hours</span><span class="v">${c.committedHours}</span></div>
+        <div class="meta-item"><span class="k">Hours Remaining</span><span class="v">${hoursRemaining}</span></div>
+        <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(job.timeline||'')}</span></div>
       </div>
-      ${p.brief ? `<div class="brief-text">${escapeHtml(p.brief)}</div>` : ''}
-      ${p.driveLink ? `<a class="drive-link" href="${escapeHtml(p.driveLink)}" target="_blank" rel="noopener">📁 Open project folder</a>` : ''}
+      ${job.brief ? `<div class="brief-text">${escapeHtml(job.brief)}</div>` : ''}
+      ${job.driveLink ? `<a class="drive-link" href="${escapeHtml(job.driveLink)}" target="_blank" rel="noopener">📁 Open project folder</a>` : ''}
 
       <div class="row" style="margin-top:16px;">
         <div class="field">
           <label>Status</label>
-          <select class="status-select" data-id="${p.id}">
-            ${STATUS_ORDER.map(s=>`<option value="${s}" ${p.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}
+          <select class="status-select" data-id="${c.id}">
+            ${STATUS_ORDER.map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}
           </select>
         </div>
         <div class="field">
-          <label>Hours worked</label>
-          <input type="number" min="0" step="0.25" class="hours-logged" data-id="${p.id}" value="${p.hoursLogged!=null?p.hoursLogged:''}" placeholder="${p.committedHours}">
+          <label>Hours worked so far</label>
+          <input type="number" min="0" step="0.25" max="${c.committedHours}" class="hours-logged" data-id="${c.id}" value="${c.hoursLogged!=null?c.hoursLogged:''}" placeholder="e.g. ${c.committedHours}">
         </div>
       </div>
 
       <div class="row" style="margin-top:10px;">
         <div class="meta-item"><span class="k">Invoice total</span><span class="v">${fmtMoney(invoiceAmt)}</span></div>
-        ${p.invoiceSubmitted
-          ? `<span class="pill ${p.paid?'paid':'unpaid'}" style="margin-left:auto;">${p.paid?'Paid':'Invoice Submitted'}</span>`
-          : `<button class="btn submit-invoice-btn" data-id="${p.id}" style="margin-left:auto;">Submit Invoice</button>`
+        ${c.invoiceSubmitted
+          ? `<span class="pill ${c.paid?'paid':'unpaid'}" style="margin-left:auto;">${c.paid?'Paid':'Invoice Submitted'}</span>`
+          : `<button class="btn submit-invoice-btn" data-id="${c.id}" style="margin-left:auto;">Submit Invoice</button>`
         }
       </div>
     </div>`;
@@ -641,29 +729,33 @@ function renderFreelancerMyProjects(){
 function bindFreelancerMyProjects(){
   document.querySelectorAll('.status-select').forEach(sel=>{
     sel.onchange = async () => {
-      const p = state.projects.find(x=>x.id===sel.dataset.id);
-      p.status = sel.value;
-      await saveKey('bsc_projects', state.projects);
+      const c = state.claims.find(x=>x.id===sel.dataset.id);
+      c.status = sel.value;
+      await saveKey('bsc_claims', state.claims);
       showToast('Status updated');
       render();
     };
   });
   document.querySelectorAll('.hours-logged').forEach(inp=>{
     inp.onchange = async () => {
-      const p = state.projects.find(x=>x.id===inp.dataset.id);
-      const v = parseFloat(inp.value);
-      p.hoursLogged = isNaN(v) ? null : v;
-      await saveKey('bsc_projects', state.projects);
+      const c = state.claims.find(x=>x.id===inp.dataset.id);
+      let v = parseFloat(inp.value);
+      if(!isNaN(v) && v > c.committedHours){
+        showToast(`Can't log more than your committed ${c.committedHours} hours here. Message the team if you need more hours on this job.`);
+        v = c.committedHours;
+      }
+      c.hoursLogged = isNaN(v) ? null : v;
+      await saveKey('bsc_claims', state.claims);
       render();
     };
   });
   document.querySelectorAll('.submit-invoice-btn').forEach(btn=>{
     btn.onclick = async () => {
-      const p = state.projects.find(x=>x.id===btn.dataset.id);
-      p.invoiceSubmitted = true;
-      p.invoiceSubmittedAt = Date.now();
-      if(p.hoursLogged==null) p.hoursLogged = p.committedHours;
-      await saveKey('bsc_projects', state.projects);
+      const c = state.claims.find(x=>x.id===btn.dataset.id);
+      c.invoiceSubmitted = true;
+      c.invoiceSubmittedAt = Date.now();
+      if(c.hoursLogged==null) c.hoursLogged = c.committedHours;
+      await saveKey('bsc_claims', state.claims);
       showToast('Invoice submitted');
       render();
     };
@@ -748,7 +840,13 @@ function renderFreelancerDocuments(){
       ? `<span class="pill warn">Submitted, awaiting confirmation</span>`
       : `<span class="pill unpaid">Not yet submitted</span>`;
 
-  const myInvoices = state.projects.filter(p=>p.claimedBy===state.currentUser.id && p.invoiceSubmitted);
+  const w9StatusPill = f.w9Received
+    ? `<span class="pill paid">Received</span>`
+    : f.w9SubmittedAt
+      ? `<span class="pill warn">Submitted, awaiting confirmation</span>`
+      : `<span class="pill unpaid">Not yet submitted</span>`;
+
+  const myInvoices = state.claims.filter(c=>c.freelancerId===state.currentUser.id && c.invoiceSubmitted);
 
   return `
     <div class="card">
@@ -761,6 +859,19 @@ function renderFreelancerDocuments(){
           : `<span class="card-sub">The upload link hasn't been added yet, check back soon.</span>`
         }
         ${!f.ndaReceived ? `<button class="btn" id="nda-submitted-btn">I've Sent My Signed NDA</button>` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">W-9</div>
+      <div class="card-sub">Download the official form at irs.gov/forms-pubs/about-form-w-9, complete it, then send it back using the link below.</div>
+      <div style="margin:10px 0;">${w9StatusPill}</div>
+      <div class="row">
+        ${link
+          ? `<a class="btn secondary" href="${escapeHtml(link)}" target="_blank" rel="noopener">Open Upload Link</a>`
+          : `<span class="card-sub">The upload link hasn't been added yet, check back soon.</span>`
+        }
+        ${!f.w9Received ? `<button class="btn" id="w9-submitted-btn">I've Sent My W-9</button>` : ''}
       </div>
     </div>
 
@@ -778,13 +889,14 @@ function renderFreelancerDocuments(){
       <table>
         <thead><tr><th>Project</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead>
         <tbody>
-          ${myInvoices.map(p=>{
-            const amt = (p.hoursLogged!=null?p.hoursLogged:p.committedHours) * p.rate;
+          ${myInvoices.map(c=>{
+            const job = state.projects.find(p=>p.id===c.jobId) || {};
+            const amt = (c.hoursLogged!=null?c.hoursLogged:c.committedHours) * c.rate;
             return `<tr>
-              <td>${escapeHtml(p.title)}</td>
-              <td>${p.hoursLogged!=null?p.hoursLogged:p.committedHours}</td>
+              <td>${escapeHtml(job.title||'(deleted job)')}</td>
+              <td>${c.hoursLogged!=null?c.hoursLogged:c.committedHours}</td>
               <td>${fmtMoney(amt)}</td>
-              <td><span class="pill ${p.paid?'paid':'unpaid'}">${p.paid?'Paid':'Awaiting Payment'}</span></td>
+              <td><span class="pill ${c.paid?'paid':'unpaid'}">${c.paid?'Paid':'Awaiting Payment'}</span></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -793,11 +905,21 @@ function renderFreelancerDocuments(){
   `;
 }
 function bindFreelancerDocuments(){
-  const btn = document.getElementById('nda-submitted-btn');
-  if(btn){
-    btn.onclick = async () => {
+  const ndaBtn = document.getElementById('nda-submitted-btn');
+  if(ndaBtn){
+    ndaBtn.onclick = async () => {
       const f = state.freelancers.find(x=>x.id===state.currentUser.id);
       f.ndaSubmittedAt = Date.now();
+      await saveKey('bsc_freelancers', state.freelancers);
+      showToast("Thanks, we'll confirm once it's received");
+      render();
+    };
+  }
+  const w9Btn = document.getElementById('w9-submitted-btn');
+  if(w9Btn){
+    w9Btn.onclick = async () => {
+      const f = state.freelancers.find(x=>x.id===state.currentUser.id);
+      f.w9SubmittedAt = Date.now();
       await saveKey('bsc_freelancers', state.freelancers);
       showToast("Thanks, we'll confirm once it's received");
       render();
@@ -809,7 +931,7 @@ function bindFreelancerDocuments(){
 function renderAdminDocuments(){
   const link = state.settings.docUploadLink || '';
   const achLink = state.settings.achUploadLink || '';
-  const rows = state.freelancers.map(f=>{
+  const ndaRows = state.freelancers.map(f=>{
     const statusPill = f.ndaReceived
       ? `<span class="pill paid">Received</span>`
       : f.ndaSubmittedAt
@@ -823,6 +945,25 @@ function renderAdminDocuments(){
           ${f.ndaReceived
             ? `<button class="btn secondary reset-nda" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Undo</button>`
             : `<button class="btn mark-nda-received" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Mark Received</button>`
+          }
+        </td>
+      </tr>`;
+  }).join('');
+
+  const w9Rows = state.freelancers.map(f=>{
+    const statusPill = f.w9Received
+      ? `<span class="pill paid">Received</span>`
+      : f.w9SubmittedAt
+        ? `<span class="pill warn">Submitted ${fmtDate(f.w9SubmittedAt)}</span>`
+        : `<span class="pill unpaid">Not submitted</span>`;
+    return `
+      <tr>
+        <td><b>${escapeHtml(f.name)}</b></td>
+        <td>${statusPill}</td>
+        <td>
+          ${f.w9Received
+            ? `<button class="btn secondary reset-w9" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Undo</button>`
+            : `<button class="btn mark-w9-received" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Mark Received</button>`
           }
         </td>
       </tr>`;
@@ -851,7 +992,15 @@ function renderAdminDocuments(){
     ${state.freelancers.length===0 ? '<div class="empty">No freelancers on the roster yet.</div>' : `
       <table>
         <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${ndaRows}</tbody>
+      </table>
+    `}
+
+    <h2 class="section-title">W-9 Status</h2>
+    ${state.freelancers.length===0 ? '<div class="empty">No freelancers on the roster yet.</div>' : `
+      <table>
+        <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+        <tbody>${w9Rows}</tbody>
       </table>
     `}
   `;
@@ -885,6 +1034,24 @@ function bindAdminDocuments(){
     btn.onclick = async () => {
       const f = state.freelancers.find(x=>x.id===btn.dataset.id);
       f.ndaReceived = false;
+      await saveKey('bsc_freelancers', state.freelancers);
+      render();
+    };
+  });
+  document.querySelectorAll('.mark-w9-received').forEach(btn=>{
+    btn.onclick = async () => {
+      const f = state.freelancers.find(x=>x.id===btn.dataset.id);
+      f.w9Received = true;
+      f.w9ReceivedAt = Date.now();
+      await saveKey('bsc_freelancers', state.freelancers);
+      showToast('Marked as received');
+      render();
+    };
+  });
+  document.querySelectorAll('.reset-w9').forEach(btn=>{
+    btn.onclick = async () => {
+      const f = state.freelancers.find(x=>x.id===btn.dataset.id);
+      f.w9Received = false;
       await saveKey('bsc_freelancers', state.freelancers);
       render();
     };
@@ -1034,12 +1201,24 @@ function bindAdminMessages(){
 function renderAdminRoster(){
   const rows = state.freelancers.map(f=>{
     const pay = state.payments[f.id];
-    const activeCount = state.projects.filter(p=>p.claimedBy===f.id && p.status!=='complete').length;
+    const activeCount = state.claims.filter(c=>c.freelancerId===f.id && c.status!=='complete').length;
+    const ndaBadge = f.ndaReceived
+      ? `<span class="pill paid">Yes</span>`
+      : f.ndaSubmittedAt
+        ? `<span class="pill warn">Pending</span>`
+        : `<span class="pill unpaid">No</span>`;
+    const w9Badge = f.w9Received
+      ? `<span class="pill paid">Yes</span>`
+      : f.w9SubmittedAt
+        ? `<span class="pill warn">Pending</span>`
+        : `<span class="pill unpaid">No</span>`;
     return `
       <tr>
         <td><b>${escapeHtml(f.name)}</b></td>
         <td>${escapeHtml(f.email)}</td>
         <td>${f.pin ? `<span class="pill paid">PIN set</span>` : `<span class="pill unpaid">Not set yet</span>`}</td>
+        <td>${ndaBadge}</td>
+        <td>${w9Badge}</td>
         <td>${pay ? `<span class="pill paid">${({ach:'ACH',venmo:'Venmo',zelle:'Zelle',paypal:'PayPal'})[pay.method]} on file</span>` : `<span class="pill unpaid">Not set</span>`}</td>
         <td>${activeCount}</td>
         <td style="white-space:nowrap;">
@@ -1061,9 +1240,10 @@ function renderAdminRoster(){
       </div>
     </div>
     <h2 class="section-title">Roster (${state.freelancers.length})</h2>
+    <div class="card-sub" style="margin-top:-6px;margin-bottom:10px;">NDA and W-9 columns are a quick at-a-glance view, manage the details from the Documents tab.</div>
     ${state.freelancers.length===0 ? '<div class="empty">No freelancers added yet.</div>' : `
       <table>
-        <thead><tr><th>Name</th><th>Email</th><th>PIN</th><th>Payment Info</th><th>Active Projects</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>PIN</th><th>NDA</th><th>W-9</th><th>Payment Info</th><th>Active Projects</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     `}
@@ -1113,13 +1293,13 @@ function renderAdminPostJob(){
   return `
     <div class="card">
       <div class="card-title">New Job Alert</div>
-      <div class="card-sub">Choose who this job is visible to, then post it.</div>
+      <div class="card-sub">Choose who this job is visible to, then post it. Multiple freelancers can each claim a portion of the hours until the budget runs out.</div>
       <div class="field"><label>Project title</label><input type="text" id="job-title" placeholder="e.g. Bellesa Boutique, Priority Retouching"></div>
       <div class="field"><label>Brief / notes</label><textarea id="job-brief" rows="4" placeholder="Describe the project, style notes, deliverable specs, etc."></textarea></div>
       <div class="field"><label>Google Drive folder link</label><input type="text" id="job-drive" placeholder="https://drive.google.com/..."></div>
       <div class="row">
         <div class="field"><label>Rate ($/hr)</label><input type="number" min="0" step="0.01" id="job-rate" placeholder="80"></div>
-        <div class="field"><label>Hours available</label><input type="text" id="job-hours" placeholder="e.g. 17 - 21"></div>
+        <div class="field"><label>Total hours budget</label><input type="number" min="0.5" step="0.5" id="job-hours" placeholder="e.g. 20"></div>
         <div class="field"><label>Timeline</label><input type="text" id="job-timeline" placeholder="e.g. Due July 10"></div>
       </div>
 
@@ -1145,12 +1325,16 @@ function renderNotifyCard(job){
   const targets = job.targetIds && job.targetIds.length
     ? state.freelancers.filter(f=>job.targetIds.includes(f.id))
     : state.freelancers;
-  const emails = targets.map(f=>f.email).filter(Boolean).join(',');
+  const emails = targets.map(f=>f.email).filter(Boolean).join(', ');
   return `
     <div class="card" style="border-color:var(--teal);">
       <div class="card-title">✅ Posted: ${escapeHtml(job.title)}</div>
-      <div class="card-sub">Visible to ${targets.length} freelancer${targets.length===1?'':'s'}. Since this dashboard can't auto-send email or text, use the button below to open a pre-filled email in your own inbox.</div>
-      <button class="btn secondary" id="notify-email-btn" style="margin-top:6px;">📧 Notify by Email</button>
+      <div class="card-sub">Visible to ${targets.length} freelancer${targets.length===1?'':'s'}. Since this dashboard can't auto-send email or text, use one of the options below.</div>
+      <div class="row" style="margin-top:6px;">
+        <button class="btn secondary" id="notify-email-btn">📧 Open Pre-filled Email</button>
+        <button class="btn secondary" id="copy-email-btn">📋 Copy Message Instead</button>
+      </div>
+      <div class="card-sub" style="margin-top:10px;">Recipients: ${escapeHtml(emails) || 'no emails on file for these freelancers'}</div>
     </div>
   `;
 }
@@ -1174,10 +1358,10 @@ function bindAdminPostJob(){
     const brief = document.getElementById('job-brief').value.trim();
     const driveLink = document.getElementById('job-drive').value.trim();
     const rate = parseFloat(document.getElementById('job-rate').value);
-    const totalHours = document.getElementById('job-hours').value.trim();
+    const totalHoursBudget = parseFloat(document.getElementById('job-hours').value);
     const timeline = document.getElementById('job-timeline').value.trim();
-    if(!title || !rate || !totalHours || !timeline){
-      showToast('Fill in title, rate, hours, and timeline'); return;
+    if(!title || !rate || !totalHoursBudget || totalHoursBudget<=0 || !timeline){
+      showToast('Fill in title, rate, total hours, and timeline'); return;
     }
 
     let targetIds = [];
@@ -1189,8 +1373,8 @@ function bindAdminPostJob(){
     }
 
     const job = {
-      id: uid(), title, brief, driveLink, rate, totalHours, timeline,
-      status:'open', createdAt: Date.now(), targetIds
+      id: uid(), title, brief, driveLink, rate, totalHoursBudget, timeline,
+      closed:false, createdAt: Date.now(), targetIds
     };
     state.projects.push(job);
     await saveKey('bsc_projects', state.projects);
@@ -1199,31 +1383,49 @@ function bindAdminPostJob(){
     render();
   };
 
-  const notifyBtn = document.getElementById('notify-email-btn');
-  if(notifyBtn){
-    notifyBtn.onclick = () => {
-      const job = state.lastPostedJob;
-      const targets = job.targetIds && job.targetIds.length
-        ? state.freelancers.filter(f=>job.targetIds.includes(f.id))
-        : state.freelancers;
-      const emails = targets.map(f=>f.email).filter(Boolean).join(',');
-      const subject = `New job available: ${job.title}`;
-      const body =
+  function buildNotifyMessage(job){
+    const targets = job.targetIds && job.targetIds.length
+      ? state.freelancers.filter(f=>job.targetIds.includes(f.id))
+      : state.freelancers;
+    const emails = targets.map(f=>f.email).filter(Boolean).join(', ');
+    const subject = `New job available: ${job.title}`;
+    const body =
 `Hi there,
 
 A new project is available:
 
 ${job.title}
 Rate: ${fmtMoney(job.rate)}/hr
-Hours available: ${job.totalHours}
+Hours available: ${job.totalHoursBudget}
 Timeline: ${job.timeline}
 
 ${job.brief ? job.brief + '\n\n' : ''}${job.driveLink ? 'Brief folder: ' + job.driveLink + '\n\n' : ''}Log in to the Freelancer Hub to accept and claim your hours.
 
 Thanks,
 Katie`;
+    return { emails, subject, body };
+  }
+
+  const notifyBtn = document.getElementById('notify-email-btn');
+  if(notifyBtn){
+    notifyBtn.onclick = () => {
+      const { emails, subject, body } = buildNotifyMessage(state.lastPostedJob);
       const mailto = `mailto:${encodeURIComponent(emails)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.location.href = mailto;
+    };
+  }
+
+  const copyBtn = document.getElementById('copy-email-btn');
+  if(copyBtn){
+    copyBtn.onclick = async () => {
+      const { emails, subject, body } = buildNotifyMessage(state.lastPostedJob);
+      const fullText = `To: ${emails}\nSubject: ${subject}\n\n${body}`;
+      try{
+        await navigator.clipboard.writeText(fullText);
+        showToast('Copied! Paste into a new email.');
+      }catch(e){
+        showToast('Could not copy automatically, select and copy the recipients above manually.');
+      }
     };
   }
 }
@@ -1238,56 +1440,187 @@ function targetingLabel(p){
 function renderAdminAllProjects(){
   if(state.projects.length===0) return `<div class="empty">No projects posted yet. Head to "Post a Job" to create one.</div>`;
   const sorted = [...state.projects].sort((a,b)=>b.createdAt-a.createdAt);
-  return sorted.map(p=>{
-    const invoiceAmt = p.claimedBy ? (p.hoursLogged!=null?p.hoursLogged:p.committedHours||0) * p.rate : 0;
+  return sorted.map(job=>{
+    const claims = claimsForJob(job.id).sort((a,b)=>b.claimedAt-a.claimedAt);
+    const claimedHours = claimedHoursForJob(job.id);
+    const remaining = remainingHoursForJob(job);
+    const open = isJobOpen(job);
+    const statusPill = job.closed
+      ? `<span class="pill unpaid">Closed</span>`
+      : (remaining<=0
+        ? `<span class="pill paid">Fully Claimed</span>`
+        : `<span class="pill open">Open</span>`);
+
+    const claimRows = claims.length===0
+      ? `<div class="card-sub" style="margin-top:10px;">No one has claimed hours on this yet.</div>`
+      : claims.map(c=>{
+          const invoiceAmt = (c.hoursLogged!=null?c.hoursLogged:c.committedHours) * c.rate;
+          return `
+          <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <div>
+                <b>${escapeHtml(c.freelancerName)}</b>
+                <span class="card-sub" style="margin-left:6px;">${c.committedHours} hrs committed${c.hoursLogged!=null ? `, ${c.hoursLogged} logged` : ''}</span>
+              </div>
+              <span class="pill ${c.status}">${STATUS_LABELS[c.status]}</span>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div class="meta-item"><span class="k">Invoice</span><span class="v">${fmtMoney(invoiceAmt)}</span></div>
+              ${c.invoiceSubmitted ? `<span class="pill ${c.paid?'paid':'unpaid'}" style="margin-left:auto;">${c.paid?'Paid':'Awaiting Payment'}</span>` : '<span class="card-sub" style="margin-left:auto;">Invoice not yet submitted</span>'}
+              ${c.invoiceSubmitted && !c.paid ? `<button class="btn mark-paid-btn" data-id="${c.id}" style="padding:6px 12px;font-size:12.5px;">Mark Paid</button>` : ''}
+            </div>
+          </div>`;
+        }).join('');
+
     return `
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div>
-          <div class="card-title">${escapeHtml(p.title)}</div>
-          <div class="card-sub">${p.claimedByName ? 'Claimed by ' + escapeHtml(p.claimedByName) : 'Unclaimed'}${p.status==='open' ? targetingLabel(p) : ''}</div>
+          <div class="card-title">${escapeHtml(job.title)}</div>
+          <div class="card-sub">${claimedHours} of ${job.totalHoursBudget} hrs claimed${open ? targetingLabel(job) : ''}</div>
         </div>
-        <span class="pill ${p.status}">${STATUS_LABELS[p.status]}</span>
+        ${statusPill}
       </div>
       <div class="meta-row">
-        <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(p.rate)}/hr</span></div>
-        <div class="meta-item"><span class="k">Hours</span><span class="v">${p.committedHours ? p.committedHours + ' committed' : p.totalHours + ' available'}</span></div>
-        <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(p.timeline)}</span></div>
-        ${p.hoursLogged!=null ? `<div class="meta-item"><span class="k">Hours logged</span><span class="v">${p.hoursLogged}</span></div>` : ''}
+        <div class="meta-item"><span class="k">Rate</span><span class="v">${fmtMoney(job.rate)}/hr</span></div>
+        <div class="meta-item"><span class="k">Hours Remaining</span><span class="v">${remaining}</span></div>
+        <div class="meta-item"><span class="k">Timeline</span><span class="v">${escapeHtml(job.timeline)}</span></div>
       </div>
-      ${p.driveLink ? `<a class="drive-link" href="${escapeHtml(p.driveLink)}" target="_blank" rel="noopener">📁 Project folder</a>` : ''}
-      ${p.claimedBy ? `
-        <div class="row" style="margin-top:12px;">
-          <div class="meta-item"><span class="k">Invoice</span><span class="v">${fmtMoney(invoiceAmt)}</span></div>
-          ${p.invoiceSubmitted ? `<span class="pill ${p.paid?'paid':'unpaid'}" style="margin-left:auto;">${p.paid?'Paid':'Awaiting Payment'}</span>` : '<span class="card-sub" style="margin-left:auto;">Invoice not yet submitted</span>'}
-          ${p.invoiceSubmitted && !p.paid ? `<button class="btn mark-paid-btn" data-id="${p.id}">Mark Paid</button>` : ''}
-        </div>
-      ` : `
-        <div style="margin-top:12px;">
-          <button class="btn danger cancel-job-btn" data-id="${p.id}" style="padding:6px 12px;font-size:12.5px;">Cancel job</button>
-        </div>
-      `}
+      ${job.driveLink ? `<a class="drive-link" href="${escapeHtml(job.driveLink)}" target="_blank" rel="noopener">📁 Project folder</a>` : ''}
+
+      ${claimRows}
+
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        ${claims.length===0 ? `<button class="btn danger cancel-job-btn" data-id="${job.id}" style="padding:6px 12px;font-size:12.5px;">Delete job</button>` : ''}
+        ${!job.closed && remaining>0 ? `<button class="btn secondary close-job-btn" data-id="${job.id}" style="padding:6px 12px;font-size:12.5px;">Close early</button>` : ''}
+        ${job.closed ? `<button class="btn secondary reopen-job-btn" data-id="${job.id}" style="padding:6px 12px;font-size:12.5px;">Reopen</button>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
 function bindAdminAllProjects(){
   document.querySelectorAll('.mark-paid-btn').forEach(btn=>{
     btn.onclick = async () => {
-      const p = state.projects.find(x=>x.id===btn.dataset.id);
-      p.paid = true; p.paidAt = Date.now();
-      await saveKey('bsc_projects', state.projects);
+      const c = state.claims.find(x=>x.id===btn.dataset.id);
+      c.paid = true; c.paidAt = Date.now();
+      await saveKey('bsc_claims', state.claims);
       showToast('Marked as paid');
       render();
     };
   });
   document.querySelectorAll('.cancel-job-btn').forEach(btn=>{
     btn.onclick = async () => {
-      if(!confirm('Cancel and remove this open job?')) return;
+      if(!confirm('Delete this job? It has no claims yet, so this is safe to remove.')) return;
       state.projects = state.projects.filter(p=>p.id!==btn.dataset.id);
       await saveKey('bsc_projects', state.projects);
       render();
     };
   });
+  document.querySelectorAll('.close-job-btn').forEach(btn=>{
+    btn.onclick = async () => {
+      const job = state.projects.find(x=>x.id===btn.dataset.id);
+      job.closed = true;
+      await saveKey('bsc_projects', state.projects);
+      showToast('Job closed to new claims');
+      render();
+    };
+  });
+  document.querySelectorAll('.reopen-job-btn').forEach(btn=>{
+    btn.onclick = async () => {
+      const job = state.projects.find(x=>x.id===btn.dataset.id);
+      job.closed = false;
+      await saveKey('bsc_projects', state.projects);
+      showToast('Job reopened');
+      render();
+    };
+  });
+}
+
+/* ============================= ADMIN: INVOICES (SPREADSHEET VIEW) ============================= */
+function renderAdminInvoices(){
+  const rows = state.claims
+    .filter(c => c.invoiceSubmitted)
+    .sort((a,b) => (b.invoiceSubmittedAt||0) - (a.invoiceSubmittedAt||0));
+
+  if(rows.length===0){
+    return `<div class="empty">No invoices submitted yet. They'll show up here as freelancers submit them from My Projects.</div>`;
+  }
+
+  const totalUnpaid = rows.filter(c=>!c.paid).reduce((sum,c)=> sum + (c.hoursLogged!=null?c.hoursLogged:c.committedHours)*c.rate, 0);
+
+  const tableRows = rows.map(c=>{
+    const job = state.projects.find(p=>p.id===c.jobId) || {};
+    const hours = c.hoursLogged!=null ? c.hoursLogged : c.committedHours;
+    const amount = hours * c.rate;
+    return `
+      <tr>
+        <td>${escapeHtml(c.freelancerName)}</td>
+        <td>${escapeHtml(job.title||'(deleted job)')}</td>
+        <td>${fmtMoney(c.rate)}/hr</td>
+        <td>${hours}</td>
+        <td><b>${fmtMoney(amount)}</b></td>
+        <td>${fmtDate(c.invoiceSubmittedAt)}</td>
+        <td><span class="pill ${c.paid?'paid':'unpaid'}">${c.paid?'Paid':'Unpaid'}</span></td>
+        <td>${!c.paid ? `<button class="btn mark-paid-btn-inv" data-id="${c.id}" style="padding:5px 10px;font-size:12px;">Mark Paid</button>` : ''}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div class="card-title">Invoices</div>
+          <div class="card-sub">${rows.length} submitted, ${fmtMoney(totalUnpaid)} currently unpaid</div>
+        </div>
+        <button class="btn secondary" id="export-csv-btn">⬇ Export as CSV</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Freelancer</th><th>Project</th><th>Rate</th><th>Hours</th><th>Amount</th><th>Submitted</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  `;
+}
+function bindAdminInvoices(){
+  document.querySelectorAll('.mark-paid-btn-inv').forEach(btn=>{
+    btn.onclick = async () => {
+      const c = state.claims.find(x=>x.id===btn.dataset.id);
+      c.paid = true; c.paidAt = Date.now();
+      await saveKey('bsc_claims', state.claims);
+      showToast('Marked as paid');
+      render();
+    };
+  });
+  const exportBtn = document.getElementById('export-csv-btn');
+  if(exportBtn){
+    exportBtn.onclick = () => {
+      const rows = state.claims.filter(c => c.invoiceSubmitted);
+      const header = ['Freelancer','Project','Rate','Hours','Amount','Submitted','Status'];
+      const lines = [header];
+      rows.forEach(c=>{
+        const job = state.projects.find(p=>p.id===c.jobId) || {};
+        const hours = c.hoursLogged!=null ? c.hoursLogged : c.committedHours;
+        const amount = hours * c.rate;
+        lines.push([
+          c.freelancerName, job.title||'(deleted job)', c.rate, hours,
+          amount.toFixed(2), fmtDate(c.invoiceSubmittedAt), c.paid?'Paid':'Unpaid'
+        ]);
+      });
+      const csv = lines.map(row => row.map(field => `"${String(field).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bsc_invoices_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('CSV downloaded');
+    };
+  }
 }
 
 /* ============================= INIT ============================= */
