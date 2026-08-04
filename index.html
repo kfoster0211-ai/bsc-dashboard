@@ -654,7 +654,7 @@ function bindFreelancerJobs(){
         render();
         return;
       }
-      state.claims.push({
+      const newClaim = {
         id: uid(),
         jobId: p.id,
         freelancerId: state.currentUser.id,
@@ -666,8 +666,14 @@ function bindFreelancerJobs(){
         claimedAt: Date.now(),
         invoiceSubmitted: false, invoiceSubmittedAt: null,
         paid: false, paidAt: null,
-      });
-      await saveKey('bsc_claims', state.claims);
+      };
+      state.claims.push(newClaim);
+      const ok = await saveKey('bsc_claims', state.claims);
+      if(!ok){
+        state.claims = state.claims.filter(c=>c.id!==newClaim.id);
+        showToast("Couldn't claim this job, check your connection and try again.");
+        return;
+      }
       showToast('Job claimed! Find it under My Projects.');
       state.tab = 'myprojects';
       render();
@@ -752,10 +758,16 @@ function bindFreelancerMyProjects(){
   document.querySelectorAll('.submit-invoice-btn').forEach(btn=>{
     btn.onclick = async () => {
       const c = state.claims.find(x=>x.id===btn.dataset.id);
+      const prevSubmitted = c.invoiceSubmitted, prevAt = c.invoiceSubmittedAt, prevHours = c.hoursLogged;
       c.invoiceSubmitted = true;
       c.invoiceSubmittedAt = Date.now();
       if(c.hoursLogged==null) c.hoursLogged = c.committedHours;
-      await saveKey('bsc_claims', state.claims);
+      const ok = await saveKey('bsc_claims', state.claims);
+      if(!ok){
+        c.invoiceSubmitted = prevSubmitted; c.invoiceSubmittedAt = prevAt; c.hoursLogged = prevHours;
+        showToast("Couldn't submit, check your connection and try again.");
+        return;
+      }
       showToast('Invoice submitted');
       render();
     };
@@ -822,8 +834,14 @@ function bindFreelancerPayment(){
     if(currentMethod!=='ach'){
       data.handle = document.getElementById('pf-handle').value.trim();
     }
+    const prev = state.payments[state.currentUser.id];
     state.payments[state.currentUser.id] = data;
-    await saveKey('bsc_payments', state.payments);
+    const ok = await saveKey('bsc_payments', state.payments);
+    if(!ok){
+      state.payments[state.currentUser.id] = prev;
+      showToast("Couldn't save, check your connection and try again.");
+      return;
+    }
     showToast(currentMethod==='ach' ? 'Payment method saved. Use the secure link to send your bank details.' : 'Payment info saved');
     render();
   };
@@ -1219,7 +1237,12 @@ function renderAdminRoster(){
         <td>${f.pin ? `<span class="pill paid">PIN set</span>` : `<span class="pill unpaid">Not set yet</span>`}</td>
         <td>${ndaBadge}</td>
         <td>${w9Badge}</td>
-        <td>${pay ? `<span class="pill paid">${({ach:'ACH',venmo:'Venmo',zelle:'Zelle',paypal:'PayPal'})[pay.method]} on file</span>` : `<span class="pill unpaid">Not set</span>`}</td>
+        <td>${pay
+          ? (pay.method==='ach'
+              ? `<span class="pill paid">ACH selected</span><div class="card-sub" style="margin-top:2px;">Sent via secure link</div>`
+              : `<span class="pill paid">${({venmo:'Venmo',zelle:'Zelle',paypal:'PayPal'})[pay.method]}</span><div class="card-sub" style="margin-top:2px;">${escapeHtml(pay.handle||'')}</div>`
+            )
+          : `<span class="pill unpaid">Not set</span>`}</td>
         <td>${activeCount}</td>
         <td style="white-space:nowrap;">
           ${f.pin ? `<button class="btn secondary reset-pin" data-id="${f.id}" style="padding:5px 10px;font-size:12px;">Reset PIN</button>` : ''}
@@ -1377,7 +1400,12 @@ function bindAdminPostJob(){
       closed:false, createdAt: Date.now(), targetIds
     };
     state.projects.push(job);
-    await saveKey('bsc_projects', state.projects);
+    const ok = await saveKey('bsc_projects', state.projects);
+    if(!ok){
+      state.projects = state.projects.filter(p=>p.id!==job.id);
+      showToast("Couldn't post the job, check your connection and try again.");
+      return;
+    }
     state.lastPostedJob = job;
     showToast('Job posted!');
     render();
@@ -1502,8 +1530,14 @@ function bindAdminAllProjects(){
   document.querySelectorAll('.mark-paid-btn').forEach(btn=>{
     btn.onclick = async () => {
       const c = state.claims.find(x=>x.id===btn.dataset.id);
+      const prevPaid = c.paid, prevAt = c.paidAt;
       c.paid = true; c.paidAt = Date.now();
-      await saveKey('bsc_claims', state.claims);
+      const ok = await saveKey('bsc_claims', state.claims);
+      if(!ok){
+        c.paid = prevPaid; c.paidAt = prevAt;
+        showToast("Couldn't save, check your connection and try again.");
+        return;
+      }
       showToast('Marked as paid');
       render();
     };
@@ -1587,8 +1621,14 @@ function bindAdminInvoices(){
   document.querySelectorAll('.mark-paid-btn-inv').forEach(btn=>{
     btn.onclick = async () => {
       const c = state.claims.find(x=>x.id===btn.dataset.id);
+      const prevPaid = c.paid, prevAt = c.paidAt;
       c.paid = true; c.paidAt = Date.now();
-      await saveKey('bsc_claims', state.claims);
+      const ok = await saveKey('bsc_claims', state.claims);
+      if(!ok){
+        c.paid = prevPaid; c.paidAt = prevAt;
+        showToast("Couldn't save, check your connection and try again.");
+        return;
+      }
       showToast('Marked as paid');
       render();
     };
